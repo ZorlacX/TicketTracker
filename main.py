@@ -3,6 +3,7 @@ import tkinter.font as font
 import re
 import mysql.connector
 import csv
+from tkinter import *
 
 class TicketTracker(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -11,6 +12,7 @@ class TicketTracker(tk.Tk):
         self.title("Ticket Tracker")
         Label = []
         UserInput = []
+
         self.Font1 = font.Font(family = 'Helvetica', size = 11, weight = "bold")
         self.Font2 = font.Font(family = 'Helvetica', size = 12, weight = "bold")
         self.container = tk.Frame()
@@ -34,10 +36,13 @@ class TicketTracker(tk.Tk):
         for text, mode in self.MODES:
             b.append(tk.Radiobutton(self, text=text,font = self.Font1, variable=self.v, 
                     value=mode, command = self.cb, indicatoron = 1).grid(row = 0, column = mode, padx = 2))
-        self.mycursor = self.mydb.cursor(buffered=True)         
+        self.mycursor = self.mydb.cursor(buffered=True)   
+        self.table_test()            
+             
         self.add_entry()
+
+    def table_test(self):
         tables=[]
-              
         self.mycursor.execute("SHOW TABLES")
         for x in self.mycursor:
             y =  ''.join(x) 
@@ -46,12 +51,12 @@ class TicketTracker(tk.Tk):
             None
             #self.create_table()
         else:self.create_table()
-        print(tables)
-            
+
         
     def create_table(self):
         #self.mycursor.execute("DROP TABLE tickets")
         self.mycursor.execute("CREATE TABLE tickets (id INT AUTO_INCREMENT PRIMARY KEY, date DATE, ticket_number CHAR(5), ticket_task VARCHAR(255), hrs DOUBLE(4, 2), description VARCHAR(255), INDEX (ticket_number))") 
+        
     def cb(self):
         for child in self.container.winfo_children():
             child.destroy()
@@ -94,31 +99,42 @@ class LogIn(tk.Label):
         self.grid(row = 0, column = 0, sticky = "s")
         Label = []
         UserInput = []
-        '''Label.append(Descriptor(parent = self, r=0, c=1))
+        boxvar = IntVar()
+        Label.append(Descriptor(parent = self, r=0, c=1))
         Label.append(Descriptor(parent = self, r=1, c=0))
         Label.append(Descriptor(parent = self, r=2, c=0))
         UserInput.append(Input(parent = self, r=0, c=1, w = 50))
         UserInput.append(Input(parent = self, r=1, c=1, w = 50))
         Label[0].config(text = "Login Details")        
         Label[1].config(text = "User: ")
-        Label[2].config(text = "Password")'''
+        Label[2].config(text = "Password")
         
-        Loginbtn = tk.Button(self, text = "Login", borderwidth=0, height = 1, width = 5, 
+        Loginbtn1 = tk.Button(self, text = "Login", borderwidth=0, height = 1, width = 5, 
                         font = ('DejaVu Serif', 26, "bold"), command = lambda: SQLLogin())
-        Loginbtn.grid(row = 1, column = 2, sticky = 'n', pady = 4, padx = 4, rowspan = 2)
-
+        Loginbtn1.grid(row = 1, column = 2, sticky = 'n', pady = 4, padx = 4, rowspan = 2)
+        
+        var1 = IntVar()
+        Checkbutton(self, text="Quick Login", variable=var1).grid(row=1, column = 3, sticky=W)
         
         def SQLLogin():
+            
             try:
-                parent.mydb = mysql.connector.connect(
-                host="localhost",
-                user="Zorlac",#UserInput[0].get()
-                passwd="#Zorlac69",#UserInput[1].get()
-                auth_plugin="mysql_native_password"
-                )
+                if (var1.get()):
+                    parent.mydb = mysql.connector.connect(
+                    host="localhost",
+                    user="Zorlac",
+                    passwd="Zorlac69",
+                    auth_plugin="mysql_native_password"
+                    )
+                else:
+                    parent.mydb = mysql.connector.connect(
+                    host="localhost",
+                    user=UserInput[0].get(),
+                    passwd=UserInput[1].get(),
+                    auth_plugin="mysql_native_password"
+                    )
                 self.destroy()
-                controller.choose_db()  
-                print(parent.mydb)
+                controller.choose_db()
             except:
                 Error = Descriptor(parent = self, r=3, c=1)
                 Error.config(text = "Invalid Login Details.\nPlease try again.")
@@ -140,8 +156,7 @@ class ChooseDB(tk.Label):
         mycursor = parent.mydb.cursor()                
         mycursor.execute("SHOW DATABASES")
         for x in mycursor:
-            y =  ''.join(x) 
-            print(y)
+            y =  ''.join(x)
             choices.append(y)   
              
         tkvar = tk.StringVar()
@@ -319,7 +334,7 @@ class DateBox(tk.Entry):
         def ValidateDate():
             inputString = self.get()
             print (inputString)
-            if re.match(r"^[2][0][0-2][0-9][-][0-1][0-2][-][0-3][0-9]", inputString):
+            if re.match(r"^[2][0][0-2][0-9][-][0-1][0-9][-][0-3][0-9]", inputString):
                 print("Input accepted")
                 self.config(fg= "black"  ) 
                 return True
@@ -341,9 +356,14 @@ class TicketSelect(tk.Label):
         for x in myresult:
             choices.append(''.join(x))
         tkvar.set('Ticket#')
-        popupMenu = tk.OptionMenu(self, tkvar, *choices, command = parent.func)
-        popupMenu.grid()
+        if (choices):
+            popupMenu = tk.OptionMenu(self, tkvar, *choices, command = parent.func)
+            popupMenu.grid()
         self.grid(row = 0, column =0, rowspan = 2) 
+        
+    #https://tecadmin.net/install-mysql-server-on-debian9-stretch/
+    #https://www.w3schools.com/sql/sql_create_db.asp
+    #https://stackoverflow.com/questions/50557234/authentication-plugin-caching-sha2-password-is-not-supported
     
 if __name__ == "__main__":
     app = TicketTracker()      
