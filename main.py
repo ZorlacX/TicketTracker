@@ -3,12 +3,14 @@ import tkinter.font as font
 import re
 import mysql.connector
 import csv
+import subprocess
 from tkinter import *
+from subprocess import Popen
 
 class TicketTracker(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
-        self.geometry('800x480')
+        self.geometry('800x200')
         self.title("Ticket Tracker")
         Label = []
         UserInput = []
@@ -49,12 +51,10 @@ class TicketTracker(tk.Tk):
             tables.append(y) 
         if "tickets" in tables:
             None
-            #self.create_table()
         else:self.create_table()
 
         
     def create_table(self):
-        #self.mycursor.execute("DROP TABLE tickets")
         self.mycursor.execute("CREATE TABLE tickets (id INT AUTO_INCREMENT PRIMARY KEY, date DATE, ticket_number CHAR(5), ticket_task VARCHAR(255), hrs DOUBLE(4, 2), description VARCHAR(255), INDEX (ticket_number))") 
         
     def cb(self):
@@ -173,7 +173,6 @@ class ChooseDB(tk.Label):
 class AddEntry(tk.Label):
     def __init__(self, parent, controller):
         tk.Label.__init__(self, parent)
-        self.config(text = "0", anchor ="s")
         self.grid(row = 1, column = 0, sticky = "s")
         self.Label = []
         UserInput = []
@@ -216,12 +215,9 @@ class AddEntry(tk.Label):
 class RemoveEntry(tk.Label):
     def __init__(self, parent, controller):
         tk.Label.__init__(self, parent)
-        self.config(text = "1", anchor ="s")
         self.grid(row = 1, column = 0, sticky = "s")
-        
         Label = []
         UserInput = []
-
         Ticket = TicketSelect(self, controller)
         Label.append(Descriptor(parent = self, r=0, c=1))
         Label.append(Descriptor(parent = self, r=0, c=2))
@@ -243,7 +239,6 @@ class RemoveEntry(tk.Label):
 class AddTicket(tk.Label):
     def __init__(self, parent, controller):
         tk.Label.__init__(self, parent)
-        self.config(text = "2", anchor ="s")
         self.grid(row = 1, column = 0, sticky = "s")
         Label = []
         UserInput = []
@@ -279,7 +274,6 @@ class TicketReport(tk.Label):
     def __init__(self, parent, controller):
         tk.Label.__init__(self, parent)
         self.controller = controller
-        self.config(text = "3", anchor ="s")
         self.grid(row = 1, column = 0, sticky = "s")
         Ticket = TicketSelect(self, controller)
  
@@ -290,7 +284,7 @@ class TicketReport(tk.Label):
           print(x)
         
         column_names = [i[0] for i in self.controller.mycursor.description]
-        fp = open('Report_Ticket_'+val+'.csv', 'w')
+        fp = open('Report_Ticket_'+val+'.xls', 'w')
         myFile = csv.writer(fp, lineterminator='\n')
         myFile.writerow(column_names)
         myFile.writerows(myresult)
@@ -300,18 +294,34 @@ class TicketReport(tk.Label):
 class DateReport(tk.Label):
     def __init__(self, parent, controller):
         tk.Label.__init__(self, parent)
-        self.config(text = "4", anchor ="s")
+        self.controller = controller
         self.grid(row = 1, column = 0, sticky = "s") 
-        
+        self.Label = []
+        self.Label.append(Descriptor(parent = self, r=0, c=1))
+        self.Label.append(Descriptor(parent = self, r=0, c=2))
+        self.Label[0].config(text = "Start Date(YYYY-MM-DD)")
+        self.Label[1].config(text = "End Date(YYYY-MM-DD)")
         StartDate = DateBox(parent = self, r=0, c=1, w = 10)
-        EndDate = DateBox(parent = self, r=0, c=2, w = 10)    
-        
-        controller.mycursor.execute("SELECT * FROM tickets")
-        #sql = "SELECT * FROM customers WHERE address ='Park Lane 38'"
-        myresult = controller.mycursor.fetchall()
+        EndDate = DateBox(parent = self, r=0, c=2, w = 10) 
+        generate = tk.Button(self, text = "Generate", command = lambda:GenerateDate())
+        generate.grid(row = 1, column = 3)
 
-        for x in myresult:
-          print(x)       
+        def GenerateDate():
+            StartDate.ValidateDate()
+            EndDate.ValidateDate()
+            if ((StartDate.validated + EndDate.validated) == 2):
+                self.controller.mycursor.execute("SELECT * FROM tickets WHERE date >= '" + StartDate.get() + "' AND date <= '" + EndDate.get() +"'")
+                myresult = self.controller.mycursor.fetchall()
+                for x in myresult:
+                    print(x) 
+                    
+                column_names = [i[0] for i in controller.mycursor.description]
+                fp = open(StartDate.inputString+' to '+EndDate.inputString+'.csv', 'w')
+                myFile = csv.writer(fp, lineterminator='\n')
+                myFile.writerow(column_names)
+                myFile.writerows(myresult)
+                fp.close() 
+            else: ()
         
 class Descriptor(tk.Label):
     def __init__(self, parent, r, c):
@@ -330,20 +340,24 @@ class DateBox(tk.Entry):
         tk.Entry.__init__(self, parent)
         self.grid(row = r+1, column = c)
         self.config(width = w)
+        self.inputString = "0"
+        self.validated=0
+        self.config(validate ='focusout', vcmd = lambda:self.ValidateDate()) 
         
-        def ValidateDate():
-            inputString = self.get()
-            print (inputString)
-            if re.match(r"^[2][0][0-2][0-9][-][0-1][0-9][-][0-3][0-9]", inputString):
-                print("Input accepted")
-                self.config(fg= "black"  ) 
-                return True
-            else:
-                print("Bad input, please try again") 
-                self.config(fg= "red")    
-                return False         
+    def ValidateDate(self):
+        self.inputString = self.get()
+        if re.match(r"^[2][0][0-2][0-9][-][0-1][0-9][-][0-3][0-9]", self.inputString):
+            self.validated=1
+            print("Input accepted")
+            self.config(fg= "green"  ) 
+            return True
+        else: 
+            self.validated=0
+            print("Bad input, please try again") 
+            self.config(fg= "red")    
+            return False         
         
-        self.config(validate ='focusout', vcmd = lambda:ValidateDate()) 
+
 
 class TicketSelect(tk.Label):
     def __init__(self, parent, controller):
